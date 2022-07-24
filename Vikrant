@@ -1,0 +1,66 @@
+---
+- name: This playbook will install tomcat on the managed host
+  hosts: 192.168.80.137
+  become: true
+  vars:
+          - pkg_name: java-11-openjdk-devel
+          - tom_user: tomcat
+
+  tasks:
+          - name: ensure system is updated
+            yum:
+                    name: "*"
+                    state: latest
+
+          - name: install {{pkg_name}} on the server
+            yum:
+                    name: "{{pkg_name}}"
+                    state: present
+
+          - name: copy the file in /usr/local/tomcat9
+            copy:
+                    src: /tmp/apache-tomcat-9.0.60/
+                    dest: /usr/local/tomcat9
+
+          - name: Creation of system user {{tom_user}} user
+            user:
+                    name: "{{tom_user}}"
+                    system: true
+                    state: present
+
+          - name: Assigning {{tom_user}} user ownership
+            file:
+                    path: /usr/local/tomcat9
+                    state: directory
+                    owner: "{{tom_user}}"
+                    group: "{{tom_user}}"
+                    recurse: true
+
+          - name: copy service file
+            copy:
+                    src: /tmp/tomcat/tomcat.service
+                    dest: /etc/systemd/system/tomcat.service
+
+          - name: reload service daemon
+            systemd:
+                    daemon_reload: true
+
+          - name: Start the service
+            service:
+                    name: tomcat.service
+                    state: restarted
+                    enabled: true
+
+          - name: open the ports
+            firewalld:
+                    port: 8080/tcp
+                    permanent: true
+                    immediate: true
+                    state: enabled
+
+          - name: open the ports
+            firewalld:
+                    port: 8443/tcp
+                    permanent: true
+                    immediate: true
+                    state: enabled
